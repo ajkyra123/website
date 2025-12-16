@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Endless Clicker Tycoon</title>
+<title>Money Clicker Incremental Clone</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body { margin:0; font-family:Arial,sans-serif; background:#0e0e0e; color:white; text-align:center; }
@@ -22,7 +22,7 @@ h1 { margin:10px; }
 </head>
 <body>
 
-<h1>Endless Clicker Tycoon</h1>
+<h1>Money Clicker Incremental Clone</h1>
 
 <div id="top">
 💰 Money: <span id="money">0</span> | 🖱 Click: <span id="clickStat">1</span> | ⚙ Auto/sec: <span id="autoStat">0</span> | ✖ Multi: <span id="multiStat">1x</span> | 🔁 Rebirths: <span id="rebirths">0</span> | 💎 Tokens: <span id="rbTokens">0</span>
@@ -79,58 +79,67 @@ function updateUI(){
 }
 
 // -------------------- CLICK --------------------
-function clickMoney(){ money+=clickPower*multiplier; updateUI(); }
-setInterval(()=>{ money+=autoIncome*multiplier; updateUI(); },1000);
+function clickMoney(){ money += clickPower*multiplier; updateUI(); }
+setInterval(()=>{ money += autoIncome*multiplier; updateUI(); },1000);
 
 // -------------------- GENERIC UPGRADE FUNCTION --------------------
-function makeUpgrade(tab,name,base,grow,fn,levels=1000){
-  let lvl=0;
-  const c=document.createElement("div"); c.className="card";
-  const b=document.createElement("button");
+function makeUpgrade(tab,name,levels,baseArray,valueArray){
+  for(let i=0;i<levels;i++){
+    const c=document.createElement("div"); c.className="card";
+    const b=document.createElement("button");
 
-  function cost(){ return Math.floor(base*Math.pow(grow,lvl)); }
+    let cost=baseArray[i]; // cost array
+    let value=valueArray[i]; // value increase
 
-  b.onclick=()=>{
-    if(money>=cost() && lvl<levels){ money-=cost(); lvl++; fn(); render(); }
-  };
+    b.onclick=()=>{ 
+      if(money>=cost){ money-=cost; 
+        if(tab.id==='clickTab') clickPower+=value;
+        if(tab.id==='autoTab') autoIncome+=value;
+        if(tab.id==='boostTab') multiplier*=value;
+        cost*=1.5; // optional scaling
+        value*=1.5; 
+        render(); updateUI();
+      }
+    }
 
-  function render(){
-    c.innerHTML=`<h3>${name}</h3><p>Level: ${lvl}</p><p>Cost: ${format(cost())}</p>`;
-    b.textContent="Buy"; c.appendChild(b); updateUI();
+    function render(){
+      c.innerHTML=`<h3>${name}</h3><p>Value: ${format(value)}</p><p>Cost: ${format(cost)}</p>`;
+      c.appendChild(b);
+    }
+    render(); tab.appendChild(c);
   }
-
-  render(); tab.appendChild(c);
 }
 
 // -------------------- CLICK UPGRADES --------------------
-makeUpgrade(document.getElementById('clickTab'),"+1 Click",10,1.3,()=>clickPower+=1,1000);
-makeUpgrade(document.getElementById('clickTab'),"+5 Click",100,1.35,()=>clickPower+=5,1000);
-makeUpgrade(document.getElementById('clickTab'),"+20 Click",500,1.4,()=>clickPower+=20,1000);
+makeUpgrade(document.getElementById('clickTab'),"+ Click",[10000,100000,1000000,25000000,100000000,1000000000],[10000,100000,1000000,25000000,100000000,1000000000]);
 
 // -------------------- AUTO UPGRADES --------------------
-makeUpgrade(document.getElementById('autoTab'),"+1 Auto/sec",50,1.35,()=>autoIncome+=1,1000);
-makeUpgrade(document.getElementById('autoTab'),"+5 Auto/sec",250,1.4,()=>autoIncome+=5,1000);
+makeUpgrade(document.getElementById('autoTab'),"+ Auto/sec",[10000,100000,1000000,25000000,100000000,1000000000],[10000,100000,1000000,25000000,100000000,1000000000]);
 
 // -------------------- BOOSTS --------------------
-makeUpgrade(document.getElementById('boostTab'),"x2 Multiplier",1000,2,()=>multiplier*=2,1000);
-makeUpgrade(document.getElementById('boostTab'),"x5 Multiplier",10000,2.5,()=>multiplier*=5,1000);
-makeUpgrade(document.getElementById('boostTab'),"x10 Multiplier",100000,3,()=>multiplier*=10,1000);
+makeUpgrade(document.getElementById('boostTab'),"Multiplier",[100000,1000000,10000000,50000000,100000000,1000000000],[2,2,5,5,10,10]);
 
 // -------------------- REBIRTH --------------------
 const rCard=document.createElement("div"); rCard.className="card";
-const rBtn=document.createElement("button"); rBtn.className="rebirth-btn";
-function rebirthCost(){ return 1e6*Math.pow(10,rebirths); }
-rBtn.onclick=()=>{
-  if(money>=rebirthCost()){
-    rebirths++; rebirthTokens += rebirths;
-    money=0; clickPower=1; autoIncome=0; multiplier=1+rebirths;
-    updateUI();
-  }
-};
-rCard.innerHTML=`<h3>REBIRTH</h3><p>Reset progress<br>Gain Rebirth Tokens</p><p>Req: <span id="rbReq"></span></p>`;
-rBtn.textContent="REBIRTH"; rCard.appendChild(rBtn);
 document.getElementById('rebirthTab').appendChild(rCard);
-setInterval(()=>document.getElementById('rbReq').textContent=format(rebirthCost()),500);
+
+const rebButtons=[1,5,10,25]; // rebirth multiples
+function rebirthCost(){ return 1e6*Math.pow(10,rebirths); }
+
+rebButtons.forEach(mult=>{
+  const b=document.createElement("button"); 
+  b.textContent=`Rebirth x${mult}`;
+  b.onclick=()=>{
+    let totalCost=0;
+    let tempCost=rebirthCost();
+    for(let i=0;i<mult;i++){ totalCost+=tempCost; tempCost*=10; } // scaling per rebirth
+    if(money>=totalCost){
+      for(let i=0;i<mult;i++){ money-=rebirthCost(); rebirths++; rebirthTokens+=rebirths; clickPower=1; autoIncome=0; multiplier=1+rebirths; }
+      updateUI();
+    }
+  };
+  rCard.appendChild(b);
+});
 
 // -------------------- SKILL TREE --------------------
 function skill(tab,name,cost,desc,fn){
@@ -148,14 +157,9 @@ function skill(tab,name,cost,desc,fn){
   render(); tab.appendChild(c);
 }
 
-// Skills
 skill(document.getElementById('skillTab'),"Stronger Clicks",1,"+2 Click Power permanently",()=>clickPower+=2);
 skill(document.getElementById('skillTab'),"Auto Boost",2,"Auto income x2",()=>autoIncome*=2);
 skill(document.getElementById('skillTab'),"Money Surge",3,"Global multiplier x2",()=>multiplier*=2);
-skill(document.getElementById('skillTab'),"Rebirth Mastery",5,"Rebirth bonus +2x",()=>multiplier+=2);
-skill(document.getElementById('skillTab'),"Mega Clicks",10,"+100 Click Power",()=>clickPower+=100);
-skill(document.getElementById('skillTab'),"Mega Auto",15,"+50 Auto/sec",()=>autoIncome+=50);
-skill(document.getElementById('skillTab'),"Ultra Multiplier",20,"x10 Multiplier",()=>multiplier*=10);
 
 // -------------------- EXTRA TAB --------------------
 const extraCard=document.createElement("div"); extraCard.className="card"; extraCard.innerHTML="<h3>Extra Content</h3><p>This tab unlocks at 50 rebirth tokens!</p>";
